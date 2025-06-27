@@ -1,0 +1,7 @@
+﻿{
+  "name": "StackECS",
+  "allowUnsafeCode": true,
+  "references": [
+    "Unity.Collections"
+  ]
+}

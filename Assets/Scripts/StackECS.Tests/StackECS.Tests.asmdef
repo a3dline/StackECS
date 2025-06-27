@@ -1,0 +1,11 @@
+﻿{
+  "name": "StackECS.Tests",
+  "allowUnsafeCode": true,
+  "includePlatforms": [
+    "Editor"
+  ],
+  "references": [
+    "StackECS",
+    "Unity.PerformanceTesting"
+  ]
+}

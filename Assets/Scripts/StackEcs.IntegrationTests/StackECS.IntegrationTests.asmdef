@@ -1,0 +1,11 @@
+﻿{
+  "name": "StackECS.IntegrationTests",
+  "allowUnsafeCode": true,
+  "references": [
+    "StackECS",
+    "UnityEngine.TestRunner"
+  ],
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ]
+}
