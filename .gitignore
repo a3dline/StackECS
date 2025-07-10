@@ -8,5 +8,6 @@
 
 #Specific to Unity
 /ProjectSettings/SceneTemplateSettings.json
+/ProjectSettings/NavMeshAreas.asset
 /Library/
 /UserSettings/

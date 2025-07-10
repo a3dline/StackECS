@@ -21,7 +21,8 @@ namespace StackECS
         private readonly EntityEnumeratorEntry[] _entities;
         private readonly int _entitiesCount;
 
-        public EntityEnumerator(IReadOnlyList<Archetype> archetypes, EntityEnumeratorEntryArrayPool entityEnumeratorEntryArrayPool)
+        public EntityEnumerator(IReadOnlyList<Archetype> archetypes,
+                                EntityEnumeratorEntryArrayPool entityEnumeratorEntryArrayPool)
         {
             _entityEnumeratorEntryArrayPool = entityEnumeratorEntryArrayPool;
             _entities = entityEnumeratorEntryArrayPool.Rent();
@@ -33,9 +34,7 @@ namespace StackECS
                 var archetype = archetypes[i];
                 var entities = archetype.Span;
                 for (var j = 0; j < archetype.EntityCount; j++)
-                {
                     _entities[_entitiesCount++] = new EntityEnumeratorEntry(entities[j], archetype);
-                }
             }
 
             _index = -1;

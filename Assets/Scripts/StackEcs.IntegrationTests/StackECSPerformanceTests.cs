@@ -13,7 +13,12 @@ namespace StackEcs.IntegrationTests
         public IEnumerator SeparateOperationsSpeed()
         {
             const int count = 256 * 256;
-            var client = new StackEcsClient();
+            var parameters = new StackEcsParameters
+                             {
+                                 EntityMaxCount = count,
+                                 ComponentTypeMaxCount = 8
+                             };
+            var client = new StackEcsClient(parameters);
             var sw = new Stopwatch();
             yield return null;
 
@@ -43,7 +48,12 @@ namespace StackEcs.IntegrationTests
         public IEnumerator ChangeEntitiesInArchetypeTest()
         {
             const int count = 256 * 256;
-            var ecs = new StackEcsClient();
+            var parameters = new StackEcsParameters
+                             {
+                                 EntityMaxCount = count,
+                                 ComponentTypeMaxCount = 8
+                             };
+            var ecs = new StackEcsClient(parameters);
 
             var sw = new Stopwatch();
 
@@ -90,7 +100,12 @@ namespace StackEcs.IntegrationTests
         public IEnumerator ChangeAllentitiesTests()
         {
             const int count = 256 * 256;
-            var ecs = new StackEcsClient();
+            var parameters = new StackEcsParameters
+            {
+                EntityMaxCount = count,
+                ComponentTypeMaxCount = 8
+            };
+            var ecs = new StackEcsClient(parameters);
 
             var sw = new Stopwatch();
 

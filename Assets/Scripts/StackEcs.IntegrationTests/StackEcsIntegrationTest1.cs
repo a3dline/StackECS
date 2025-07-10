@@ -16,7 +16,7 @@ namespace StackEcs.IntegrationTests
 
             var addMovementSystem = new AddMovementSystem();
 
-            client.AddSystem(new CreateEntitySystem(10));
+            client.AddSystem(new CreateEntitySystem(100));
             client.AddSystem(addMovementSystem);
             client.AddSystem(new UpdatePositionSystem());
 

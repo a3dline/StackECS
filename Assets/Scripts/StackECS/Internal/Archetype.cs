@@ -4,10 +4,10 @@ namespace StackECS
 {
     internal class Archetype
     {
-        private readonly SpanStorage<int> _intStorage;
-        private readonly SpanStorage<uint> _uintStorage;
         private readonly Slot _entities;
         private readonly Slot _indexes;
+        private readonly SpanStorage<int> _intStorage;
+        private readonly SpanStorage<uint> _uintStorage;
 
         public Archetype(BitMask mask, SpanStorage<uint> uintStorage, SpanStorage<int> intStorage)
         {

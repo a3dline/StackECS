@@ -11,16 +11,13 @@ namespace StackECS
         {
             _arraySize = arraySize;
         }
-        
+
         public EntityEnumeratorEntry[] Rent()
         {
-            if (Pool.Count > 0)
-            {
-                return Pool.Pop();
-            }
+            if (Pool.Count > 0) return Pool.Pop();
             return new EntityEnumeratorEntry[_arraySize];
         }
-        
+
         public void Return(EntityEnumeratorEntry[] array)
         {
             Pool.Push(array);
