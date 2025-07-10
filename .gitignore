@@ -1,9 +1,12 @@
-﻿/Library/
-/Logs/
+﻿/Logs/
 /obj/
 /Temp/
-/UserSettings/
-.idea
+/.idea/
 *.csproj
 *.sln
+*.user
 
+#Specific to Unity
+/ProjectSettings/SceneTemplateSettings.json
+/Library/
+/UserSettings/

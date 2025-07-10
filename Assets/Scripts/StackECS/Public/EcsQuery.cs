@@ -10,14 +10,21 @@
         internal EcsQuery(StackEcs ecs)
         {
             _ecs = ecs;
-            _includeMask = new BitMask(ecs.HeapPool);
-            _excludeMask = new BitMask(ecs.HeapPool);
+            _includeMask = new BitMask(ecs.SpanStorageUlong);
+            _excludeMask = new BitMask(ecs.SpanStorageUlong);
             _numerator = default;
         }
 
         public bool MoveNext()
         {
-            return _numerator.MoveNext();
+            var result = _numerator.MoveNext();
+            if (!result)
+            {
+                _includeMask.Release();
+                _excludeMask.Release();
+            }
+
+            return result;
         }
 
         public Entity Current

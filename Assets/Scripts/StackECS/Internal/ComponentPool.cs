@@ -4,9 +4,9 @@
     {
         private T[] _data;
 
-        public ComponentPool(int initialCapacity)
+        public ComponentPool(int maxCapacity)
         {
-            _data = new T[initialCapacity];
+            _data = new T[maxCapacity];
         }
 
         public ref T Get(uint entity)
@@ -16,7 +16,6 @@
 
         public ref T Add(uint entity)
         {
-            ArrayUtilities.ResizeArray(ref _data, (int)entity + 1);
             _data[entity] = default;
             return ref _data[entity];
         }

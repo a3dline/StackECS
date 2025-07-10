@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using StackECS.Pools;
 
 namespace StackECS
 {
@@ -17,22 +16,26 @@ namespace StackECS
 
     internal struct EntityEnumerator
     {
-        private readonly IEntityEnumeratorEntryListPool _pool;
-
+        private readonly EntityEnumeratorEntryArrayPool _entityEnumeratorEntryArrayPool;
         private int _index;
-        private List<EntityEnumeratorEntry> _entities;
+        private readonly EntityEnumeratorEntry[] _entities;
+        private readonly int _entitiesCount;
 
-        public EntityEnumerator(IReadOnlyList<Archetype> archetypes, IEntityEnumeratorEntryListPool pool)
+        public EntityEnumerator(IReadOnlyList<Archetype> archetypes, EntityEnumeratorEntryArrayPool entityEnumeratorEntryArrayPool)
         {
-            _pool = pool;
-            _entities = pool.Rent();
+            _entityEnumeratorEntryArrayPool = entityEnumeratorEntryArrayPool;
+            _entities = entityEnumeratorEntryArrayPool.Rent();
 
+            _entitiesCount = 0;
             var archetypeLength = archetypes.Count;
             for (var i = 0; i < archetypeLength; i++)
             {
                 var archetype = archetypes[i];
+                var entities = archetype.Span;
                 for (var j = 0; j < archetype.EntityCount; j++)
-                    _entities.Add(new EntityEnumeratorEntry(archetype[j], archetype));
+                {
+                    _entities[_entitiesCount++] = new EntityEnumeratorEntry(entities[j], archetype);
+                }
             }
 
             _index = -1;
@@ -40,9 +43,8 @@ namespace StackECS
 
         public bool MoveNext()
         {
-            if (++_index < _entities.Count) return true;
-            _pool.Return(_entities);
-            _entities = null;
+            if (++_index < _entitiesCount) return true;
+            _entityEnumeratorEntryArrayPool.Return(_entities);
             return false;
         }
 

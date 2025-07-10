@@ -1,43 +1,49 @@
-﻿namespace StackECS
+﻿using System;
+
+namespace StackECS
 {
     internal class Archetype
     {
-        private uint[] _entities;
-        private int[] _indexes;
+        private readonly SpanStorage<int> _intStorage;
+        private readonly SpanStorage<uint> _uintStorage;
+        private readonly Slot _entities;
+        private readonly Slot _indexes;
 
-        public Archetype(BitMask mask, int initialCapacity)
+        public Archetype(BitMask mask, SpanStorage<uint> uintStorage, SpanStorage<int> intStorage)
         {
+            _uintStorage = uintStorage;
+            _intStorage = intStorage;
             Mask = mask;
-            _entities = new uint[initialCapacity];
-            _indexes = new int[initialCapacity];
+            _entities = uintStorage.ReserveSlot();
+            _indexes = intStorage.ReserveSlot();
         }
 
         public int EntityCount { get; private set; }
 
-        public uint this[int index] => _entities[index];
+        public Span<uint> Span => _uintStorage.GetSpan(_entities);
         public BitMask Mask { get; }
 
         public void AddEntity(uint id)
         {
-            ArrayUtilities.ResizeArray(ref _indexes, (int)id);
-            ArrayUtilities.ResizeArray(ref _entities, EntityCount);
-
-            _entities[EntityCount] = id;
-            _indexes[id] = EntityCount;
+            _uintStorage.GetSpan(_entities)[EntityCount] = id;
+            _intStorage.GetSpan(_indexes)[(int)id] = EntityCount;
             EntityCount++;
         }
 
         public void RemoveEntity(uint id)
         {
-            var index = _indexes[id];
+            var entitySpan = _uintStorage.GetSpan(_entities);
+            var indexSpan = _intStorage.GetSpan(_indexes);
+
+            var index = indexSpan[(int)id];
             var lastEntityIndex = EntityCount - 1;
 
             // swap back
             if (index != EntityCount - 1)
             {
-                var lastEntity = _entities[lastEntityIndex];
-                _entities[index] = lastEntity;
-                _indexes[lastEntity] = index;
+                var lastEntity = entitySpan[lastEntityIndex];
+                entitySpan[index] = lastEntity;
+                indexSpan[(int)lastEntity] = index;
             }
 
             EntityCount--;
@@ -55,7 +61,19 @@
 
         public bool Match(BitMask include, BitMask exclude)
         {
-            return include + Mask == Mask && Mask - exclude == Mask;
+            var summ = include + Mask;
+            var delta = Mask - exclude;
+
+            var result = summ == Mask && delta == Mask;
+            summ.Release();
+            delta.Release();
+            return result;
+        }
+
+        public void Release()
+        {
+            _uintStorage.Release(_entities);
+            Mask.Release();
         }
     }
 }

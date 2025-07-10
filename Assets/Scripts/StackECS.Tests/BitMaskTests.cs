@@ -1,20 +1,17 @@
 using NUnit.Framework;
 using StackECS;
-using System.Collections.Generic;
-using StackECS.Pools;
 
 namespace StackECSTests
 {
     [TestFixture]
     public class BitMaskTests
     {
-        private class DummyPool : IUlongListPool
-        {
-            public List<ulong> Rent() => new();
-            public void Return(List<ulong> list) { }
-        }
+        private readonly SpanStorage<ulong> _spanStorage = new(1);
 
-        private BitMask CreateMask() => new(new DummyPool());
+        private BitMask CreateMask()
+        {
+            return new BitMask(_spanStorage);
+        }
 
         [Test]
         public void SetAndGetBit()
@@ -77,7 +74,7 @@ namespace StackECSTests
             var mask2 = CreateMask();
             mask1[4] = true;
             mask2[4] = true;
-            Assert.IsTrue(mask1.Equals(mask2));
+            Assert.IsTrue(mask1 == mask2);
             Assert.AreEqual(mask1.GetHashCode(), mask2.GetHashCode());
         }
 
@@ -88,7 +85,8 @@ namespace StackECSTests
             var mask2 = CreateMask();
             mask1[4] = true;
             mask2[5] = true;
-            Assert.IsFalse(mask1.Equals(mask2));
+            Assert.IsTrue(mask1 != mask2);
+            Assert.AreNotEqual(mask1.GetHashCode(), mask2.GetHashCode());
         }
     }
-} 
+}

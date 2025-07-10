@@ -1,14 +1,16 @@
 ﻿using System.Collections.Generic;
-using StackECS.Pools;
 
 namespace StackECS
 {
     internal class StackEcs : IEcs
     {
-        private readonly Dictionary<BitMask, Archetype> _archetypes = new();
+        private readonly Dictionary<int, Archetype> _archetypes = new();
         private readonly List<Archetype> _filteredArchetypes;
         private readonly Stack<uint> _freeEntities = new();
         private readonly StackEcsParameters _parameters;
+        private readonly SpanStorage<int> _spanStorageInt;
+        private readonly SpanStorage<uint> _spanStorageUint;
+        private readonly EntityEnumeratorEntryArrayPool _entityEnumeratorEntryArrayPool;
 
         private IComponentPool[] _componentPools;
         private uint _lastEntityId;
@@ -18,19 +20,26 @@ namespace StackECS
         public StackEcs(StackEcsParameters parameters = null)
         {
             _parameters = parameters ?? new StackEcsParameters();
-            _typeIndexes = new int[_parameters.InitialTypeCapacity];
-            HeapPool = new HeapPool(_parameters.InitialTypeCapacity);
-            _filteredArchetypes = new List<Archetype>(_parameters.InitialTypeCapacity);
-            _componentPools = new IComponentPool[_parameters.InitialTypeCapacity];
+            _typeIndexes = new int[_parameters.ComponentTypeMaxCount];
+            
+            _filteredArchetypes = new List<Archetype>(_parameters.ComponentTypeMaxCount);
+            _componentPools = new IComponentPool[_parameters.ComponentTypeMaxCount];
+
+            SpanStorageUlong = new SpanStorage<ulong>(_parameters.LongMaskSizeFromComponentTypeCount);
+            _spanStorageInt = new SpanStorage<int>(_parameters.EntityMaxCount);
+            _spanStorageUint = new SpanStorage<uint>(_parameters.EntityMaxCount);
+            
+            _entityEnumeratorEntryArrayPool = new EntityEnumeratorEntryArrayPool(_parameters.EntityMaxCount);
         }
 
-        internal HeapPool HeapPool { get; }
+        internal SpanStorage<ulong> SpanStorageUlong { get; }
+        internal EntityEnumeratorEntryArrayPool EntityEnumeratorEntryArrayPool => _entityEnumeratorEntryArrayPool;
 
         public int EntityCount => (int)_lastEntityId - _freeEntities.Count;
 
         public Entity CreateEntity()
         {
-            var archetype = GetArchetype(new BitMask(HeapPool));
+            var archetype = GetArchetype(new BitMask(SpanStorageUlong));
             var entity = _freeEntities.Count > 0 ? _freeEntities.Pop() : _lastEntityId++;
             archetype.AddEntity(entity);
             return new Entity(entity, archetype, this);
@@ -63,22 +72,26 @@ namespace StackECS
                 if (archetype.Match(include, exclude))
                     _filteredArchetypes.Add(archetype);
 
-            return new EntityEnumerator(_filteredArchetypes, HeapPool);
+            return new EntityEnumerator(_filteredArchetypes, _entityEnumeratorEntryArrayPool);
         }
 
         public Archetype GetArchetype(BitMask mask)
         {
-            if (_archetypes.TryGetValue(mask, out var pool)) return pool;
+            var hashCode = mask.GetHashCode();
+            if (_archetypes.TryGetValue(hashCode, out var archetype)) return archetype;
 
-            pool = new Archetype(mask, _parameters.InitialDataCapacity);
-            _archetypes.Add(mask, pool);
-            return pool;
+            archetype = new Archetype(mask, _spanStorageUint, _spanStorageInt);
+            _archetypes.Add(hashCode, archetype);
+            return archetype;
         }
 
         public void RemoveArchetype(Archetype archetype)
         {
-            if (archetype.Mask.GetHashCode() == 0) return; // Avoid removing the empty archetype
-            _archetypes.Remove(archetype.Mask);
+            var hashCode = archetype.Mask.GetHashCode();
+            if (hashCode == 0) return; // Avoid removing the empty archetype
+
+            _archetypes.Remove(hashCode);
+            archetype.Release();
         }
 
         public int GetTypeIndex<T>()
@@ -86,7 +99,6 @@ namespace StackECS
             var typeIdIndex = TypeId<T>.Id;
             if (_typeIndexes[typeIdIndex] == 0)
             {
-                ArrayUtilities.ResizeArray(ref _typeIndexes, typeIdIndex + 1);
                 _typeIndexes[typeIdIndex] = ++_lastTypeIndex;
             }
 
@@ -95,11 +107,9 @@ namespace StackECS
 
         private ComponentPool<T> GetOrCreateComponentPool<T>(int typeIndex) where T : unmanaged
         {
-            ArrayUtilities.ResizeArray(ref _componentPools, typeIndex + 1);
-
             if (_componentPools[typeIndex] == null)
             {
-                var pool = new ComponentPool<T>(_parameters.InitialDataCapacity);
+                var pool = new ComponentPool<T>(_parameters.EntityMaxCount);
                 _componentPools[typeIndex] = pool;
                 return pool;
             }

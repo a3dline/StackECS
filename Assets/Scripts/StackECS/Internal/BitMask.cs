@@ -1,95 +1,92 @@
 ﻿using System;
-using System.Collections.Generic;
-using StackECS.Pools;
 
 namespace StackECS
 {
-    internal struct BitMask : IEquatable<BitMask>
+    internal struct BitMask
     {
-        private readonly IUlongListPool _ulongListPool;
-        private readonly List<ulong> _data;
+        private readonly SpanStorage<ulong> _spanStorage;
+        private readonly Slot _slot;
         private int _hash;
 
-        public BitMask(IUlongListPool ulongListPool)
+        public BitMask(SpanStorage<ulong> spanStorage)
         {
-            _ulongListPool = ulongListPool;
-            _data = ulongListPool.Rent();
+            _spanStorage = spanStorage;
+            _slot = spanStorage.ReserveSlot();
             _hash = 0;
         }
 
-        private BitMask(IUlongListPool ulongListPool, List<ulong> data)
+        private BitMask(SpanStorage<ulong> spanStorage, Slot slot)
         {
-            _ulongListPool = ulongListPool;
-            _data = data;
-            _hash = GetHash(data);
+            _spanStorage = spanStorage;
+            _slot = slot;
+            _hash = GetHash(_spanStorage.GetSpan(in _slot));
         }
 
         public bool this[int index]
         {
             get
             {
+                var data = _spanStorage.GetSpan(in _slot);
                 var ulongIndex = index / 64;
-                if (ulongIndex >= _data.Count)
+                if (ulongIndex >= data.Length)
                     return false;
-                return (_data[ulongIndex] & (1UL << (index % 64))) != 0;
+                return (data[ulongIndex] & (1UL << (index % 64))) != 0;
             }
             set
             {
+                var data = _spanStorage.GetSpan(in _slot);
                 var ulongIndex = index / 64;
-                EnsureCapacity(ulongIndex + 1);
                 if (value)
-                    _data[ulongIndex] |= 1UL << (index % 64);
+                    data[ulongIndex] |= 1UL << (index % 64);
                 else
-                    _data[ulongIndex] &= ~(1UL << (index % 64));
-                _hash = GetHash(_data);
+                    data[ulongIndex] &= ~(1UL << (index % 64));
+                _hash = GetHash(data);
             }
-        }
-
-        public bool Equals(BitMask other)
-        {
-            if (_data.Count != other._data.Count) return false;
-            for (var i = 0; i < _data.Count; i++)
-                if (_data[i] != other._data[i])
-                    return false;
-            return true;
         }
 
         public void Release()
         {
-            _ulongListPool.Return(_data);
-        }
-
-        private void EnsureCapacity(int longIndex)
-        {
-            while (_data.Count < longIndex) _data.Add(0UL);
+            _spanStorage.Release(_slot);
+            _hash = 0;
         }
 
         public BitMask CopyWithBit(int index)
         {
-            var copyData = _ulongListPool.Rent();
-            copyData.AddRange(_data);
-            var copy = new BitMask(_ulongListPool, copyData) { [index] = true };
-            return copy;
+            var data = _spanStorage.GetSpan(in _slot);
+
+            var copySlot = _spanStorage.ReserveSlot();
+            var copyData = _spanStorage.GetSpan(in copySlot);
+            data.CopyTo(copyData);
+
+            var copyMask = new BitMask(_spanStorage, copySlot);
+            copyMask[index] = true;
+
+            return copyMask;
         }
 
         public BitMask CopyWithoutBit(int index)
         {
-            var copyData = _ulongListPool.Rent();
-            copyData.AddRange(_data);
-            var copy = new BitMask(_ulongListPool, copyData) { [index] = false };
-            return copy;
+            var data = _spanStorage.GetSpan(in _slot);
+
+            var copySlot = _spanStorage.ReserveSlot();
+            var copyData = _spanStorage.GetSpan(in copySlot);
+            data.CopyTo(copyData);
+
+            var copyMask = new BitMask(_spanStorage, copySlot);
+            copyMask[index] = false;
+
+            return copyMask;
         }
 
         public BitMask Copy()
         {
-            var copyData = _ulongListPool.Rent();
-            copyData.AddRange(_data);
-            return new BitMask(_ulongListPool, copyData);
-        }
+            var data = _spanStorage.GetSpan(in _slot);
 
-        public override bool Equals(object obj)
-        {
-            return obj is BitMask other && Equals(other);
+            var copySlot = _spanStorage.ReserveSlot();
+            var copyData = _spanStorage.GetSpan(in copySlot);
+            data.CopyTo(copyData);
+
+            return new BitMask(_spanStorage, copySlot);
         }
 
         public override int GetHashCode()
@@ -98,48 +95,63 @@ namespace StackECS
             return _hash;
         }
 
-        public static bool operator ==(BitMask a, BitMask b)
+        public static bool operator ==(in BitMask a, in BitMask b)
         {
-            return a.Equals(b);
+            var aData = a._spanStorage.GetSpan(in a._slot);
+            var bData = b._spanStorage.GetSpan(in b._slot);
+
+            for (var i = 0; i < aData.Length; i++)
+                if (aData[i] != bData[i])
+                    return false;
+
+            return true;
         }
 
-        public static bool operator !=(BitMask a, BitMask b)
+        public static bool operator !=(in BitMask a, in BitMask b)
         {
-            return !a.Equals(b);
+            return !(a == b);
         }
 
-        public static BitMask operator +(BitMask a, BitMask b)
+        public static BitMask operator +(in BitMask a, in BitMask b)
         {
-            var len = Math.Max(a._data.Count, b._data.Count);
-            var result = new BitMask(a._ulongListPool);
+            var aData = a._spanStorage.GetSpan(in a._slot);
+            var bData = b._spanStorage.GetSpan(in b._slot);
+            var len = Math.Max(aData.Length, bData.Length);
+            var result = new BitMask(a._spanStorage);
+            var resultData = result._spanStorage.GetSpan(in result._slot);
+
             for (var i = 0; i < len; i++)
             {
-                var av = i < a._data.Count ? a._data[i] : 0UL;
-                var bv = i < b._data.Count ? b._data[i] : 0UL;
-                result._data.Add(av | bv);
+                var av = i < aData.Length ? aData[i] : 0UL;
+                var bv = i < bData.Length ? bData[i] : 0UL;
+                resultData[i] = av | bv;
             }
 
             return result;
         }
 
-        public static BitMask operator -(BitMask a, BitMask b)
+        public static BitMask operator -(in BitMask a, in BitMask b)
         {
-            var len = Math.Max(a._data.Count, b._data.Count);
-            var result = new BitMask(a._ulongListPool);
+            var aData = a._spanStorage.GetSpan(in a._slot);
+            var bData = b._spanStorage.GetSpan(in b._slot);
+            var len = Math.Max(aData.Length, bData.Length);
+            var result = new BitMask(a._spanStorage);
+            var resultData = result._spanStorage.GetSpan(in result._slot);
+
             for (var i = 0; i < len; i++)
             {
-                var av = i < a._data.Count ? a._data[i] : 0UL;
-                var bv = i < b._data.Count ? b._data[i] : 0UL;
-                result._data.Add(av & ~bv);
+                var av = i < aData.Length ? aData[i] : 0UL;
+                var bv = i < bData.Length ? bData[i] : 0UL;
+                resultData[i] = av & ~bv;
             }
 
             return result;
         }
 
-        private static int GetHash(List<ulong> data)
+        private static int GetHash(Span<ulong> data)
         {
             var hash = 17;
-            for (var i = 0; i < data.Count; i++) hash = hash * 31 + data[i].GetHashCode();
+            for (var i = 0; i < data.Length; i++) hash = hash * 31 + data[i].GetHashCode();
             return hash;
         }
     }
