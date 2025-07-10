@@ -24,13 +24,14 @@ namespace StackECS
         {
             ThrowIfRemoved();
 
-            var hash = _archetype.Hash;
             var typeId = _ecs.GetTypeIndex<T>();
-            var newHash = _archetype.GetHashWithIndex(typeId);
-            if (hash == newHash) throw new InvalidOperationException("Component already exists");
+            if (_archetype.Mask[typeId]) throw new InvalidOperationException("Component already exists");
 
+            var newMask = _archetype.GetMaskWithIndex(typeId);
             _archetype.RemoveEntity(_id);
-            _archetype = _ecs.GetArchetype(newHash);
+            if (_archetype.EntityCount == 0) _ecs.RemoveArchetype(_archetype);
+
+            _archetype = _ecs.GetArchetype(newMask);
             _archetype.AddEntity(_id);
             return ref _ecs.AddComponent<T>(_id, typeId);
         }
@@ -39,13 +40,14 @@ namespace StackECS
         {
             ThrowIfRemoved();
 
-            var hash = _archetype.Hash;
             var typeId = _ecs.GetTypeIndex<T>();
-            var newHash = _archetype.GetHashWithoutIndex(typeId);
-            if (hash == newHash) throw new InvalidOperationException("Component does not exist");
+            if (!_archetype.Mask[typeId]) throw new InvalidOperationException("Component does not exist");
 
+            var newMask = _archetype.GetMaskWithoutIndex(typeId);
             _archetype.RemoveEntity(_id);
-            _archetype = _ecs.GetArchetype(newHash);
+            if (_archetype.EntityCount == 0) _ecs.RemoveArchetype(_archetype);
+
+            _archetype = _ecs.GetArchetype(newMask);
             _archetype.AddEntity(_id);
         }
 
@@ -54,6 +56,8 @@ namespace StackECS
             ThrowIfRemoved();
 
             var typeId = _ecs.GetTypeIndex<T>();
+            if (!_archetype.Mask[typeId]) throw new InvalidOperationException("Component does not exist");
+
             return ref _ecs.GetComponent<T>(_id, typeId);
         }
 
@@ -62,8 +66,7 @@ namespace StackECS
             ThrowIfRemoved();
 
             var typeId = _ecs.GetTypeIndex<T>();
-            var modifiedHash = _archetype.GetHashWithIndex(typeId);
-            return _archetype.Hash == modifiedHash;
+            return _archetype.Mask[typeId];
         }
 
         public void Delete()
@@ -71,6 +74,7 @@ namespace StackECS
             ThrowIfRemoved();
 
             _archetype.RemoveEntity(_id);
+            if (_archetype.EntityCount == 0) _ecs.RemoveArchetype(_archetype);
             _ecs.RemoveEntity(_id);
             _removed = true;
         }

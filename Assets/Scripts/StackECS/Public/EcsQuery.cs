@@ -1,19 +1,17 @@
-﻿using Unity.Profiling;
-
-namespace StackECS
+﻿namespace StackECS
 {
     public struct EcsQuery
     {
         private readonly StackEcs _ecs;
-        private BitArray64 _includeMask;
-        private BitArray64 _excludeMask;
+        private BitMask _includeMask;
+        private BitMask _excludeMask;
         private EntityEnumerator _numerator;
 
         internal EcsQuery(StackEcs ecs)
         {
             _ecs = ecs;
-            _includeMask = new BitArray64();
-            _excludeMask = new BitArray64();
+            _includeMask = new BitMask(ecs.HeapPool);
+            _excludeMask = new BitMask(ecs.HeapPool);
             _numerator = default;
         }
 
@@ -26,7 +24,7 @@ namespace StackECS
         {
             get
             {
-                ref var entity = ref _numerator.Current;
+                var entity = _numerator.Current;
                 return new Entity(entity.Id, entity.Archetype, _ecs);
             }
         }

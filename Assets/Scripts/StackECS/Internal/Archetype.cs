@@ -1,65 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
-using Unity.Collections;
-
-namespace StackECS
+﻿namespace StackECS
 {
     internal class Archetype
     {
-        private readonly BitArray64 _bitArray;
-        private readonly uint[] _entities;
-        private readonly int[] _indexes;
-        private int _entityCount;
+        private uint[] _entities;
+        private int[] _indexes;
 
-        public Archetype(ulong hash, int capacity)
+        public Archetype(BitMask mask, int initialCapacity)
         {
-            _bitArray = new BitArray64(hash);
-            _entities = new uint[capacity];
-            _indexes = new int[capacity];
+            Mask = mask;
+            _entities = new uint[initialCapacity];
+            _indexes = new int[initialCapacity];
         }
 
-        public ulong Hash => _bitArray.Hash;
-        
-        internal int EntityCount => _entityCount;
-        internal uint this[int index] => _entities[index];
+        public int EntityCount { get; private set; }
+
+        public uint this[int index] => _entities[index];
+        public BitMask Mask { get; }
 
         public void AddEntity(uint id)
         {
-            _entities[_entityCount] = id;
-            _indexes[id] = _entityCount;
-            _entityCount++;
+            ArrayUtilities.ResizeArray(ref _indexes, (int)id);
+            ArrayUtilities.ResizeArray(ref _entities, EntityCount);
+
+            _entities[EntityCount] = id;
+            _indexes[id] = EntityCount;
+            EntityCount++;
         }
 
         public void RemoveEntity(uint id)
         {
             var index = _indexes[id];
-
-            var lastEntityIndex = _entityCount - 1;
+            var lastEntityIndex = EntityCount - 1;
 
             // swap back
-            if (index != _entityCount - 1)
+            if (index != EntityCount - 1)
             {
                 var lastEntity = _entities[lastEntityIndex];
                 _entities[index] = lastEntity;
                 _indexes[lastEntity] = index;
             }
 
-            _entityCount--;
+            EntityCount--;
         }
 
-        public ulong GetHashWithIndex(int index)
+        public BitMask GetMaskWithIndex(int index)
         {
-            return _bitArray.WithBit(index);
+            return Mask.CopyWithBit(index);
         }
 
-        public ulong GetHashWithoutIndex(int index)
+        public BitMask GetMaskWithoutIndex(int index)
         {
-            return _bitArray.WithoutBit(index);
+            return Mask.CopyWithoutBit(index);
         }
 
-        public bool Match(BitArray64 include, BitArray64 exclude)
+        public bool Match(BitMask include, BitMask exclude)
         {
-            return include + _bitArray == _bitArray && _bitArray - exclude == _bitArray;
+            return include + Mask == Mask && Mask - exclude == Mask;
         }
     }
 }

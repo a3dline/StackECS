@@ -13,7 +13,7 @@ namespace StackEcs.IntegrationTests
         public IEnumerator SeparateOperationsSpeed()
         {
             const int count = 256 * 256;
-            using var client = new StackEcsClient(count);
+            var client = new StackEcsClient();
             var sw = new Stopwatch();
             yield return null;
 
@@ -43,7 +43,7 @@ namespace StackEcs.IntegrationTests
         public IEnumerator ChangeEntitiesInArchetypeTest()
         {
             const int count = 256 * 256;
-            using var ecs = new StackEcsClient(count);
+            var ecs = new StackEcsClient();
 
             var sw = new Stopwatch();
 
@@ -90,7 +90,7 @@ namespace StackEcs.IntegrationTests
         public IEnumerator ChangeAllentitiesTests()
         {
             const int count = 256 * 256;
-            using var ecs = new StackEcsClient(count);
+            var ecs = new StackEcsClient();
 
             var sw = new Stopwatch();
 

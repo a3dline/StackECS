@@ -10,7 +10,7 @@ namespace StackECSTests
         public void GetEntitiesWithComponents()
         {
             // Arrange
-            using var ecs = new StackEcs(16);
+            var ecs = new StackEcs();
             
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
@@ -43,7 +43,7 @@ namespace StackECSTests
         public void GetEntitiesWithTwoComponents()
         {
             // Arrange
-            using var ecs = new StackEcs(16);
+            var ecs = new StackEcs();
             
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
@@ -70,7 +70,7 @@ namespace StackECSTests
         public void GetEntitiesWithoutComponent()
         {
             // Arrange
-            using var ecs = new StackEcs(16);
+            var ecs = new StackEcs();
             
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
@@ -98,7 +98,7 @@ namespace StackECSTests
         public void GetEntitiesWithAndWithoutComponents()
         {
             // Arrange
-            using var ecs = new StackEcs(16);
+            var ecs = new StackEcs();
             
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
@@ -126,7 +126,7 @@ namespace StackECSTests
         public void GetEntitiesWithComponentsFromArchetypes()
         {
             // Arrange            
-            using var ecs = new StackEcs(16);
+            var ecs = new StackEcs();
             
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
@@ -171,7 +171,7 @@ namespace StackECSTests
         public void CachedQuery()
         {
             // Arrange
-            using var ecs = new StackEcs(16);
+            var ecs = new StackEcs();
             
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
@@ -204,7 +204,7 @@ namespace StackECSTests
         public void ChangeQueryAfterUse()
         {
             // Arrange
-            using var ecs = new StackEcs(16);
+            var ecs = new StackEcs();
             
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
@@ -233,6 +233,44 @@ namespace StackECSTests
             // Assert
             Assert.AreEqual(2, intCount1);
             Assert.AreEqual(1, intFloatCount);
+        }
+
+        [Test(Description = "Query returns empty if no entities")] 
+        public void QueryReturnsEmptyIfNoEntities() 
+        { 
+            var ecs = new StackEcs(); 
+            var entities = ecs.Query.Include<int>(); 
+            int count = 0; 
+            foreach (var entity in entities) count++; 
+            Assert.AreEqual(0, count); 
+        }
+
+        [Test(Description = "Query by non-existent component returns empty")] 
+        public void QueryByNonExistentComponentReturnsEmpty() 
+        { 
+            var ecs = new StackEcs(); 
+            var e = ecs.CreateEntity(); 
+            e.AddComponent<float>(); 
+            var entities = ecs.Query.Include<int>(); 
+            int count = 0; 
+            foreach (var entity in entities) count++; 
+            Assert.AreEqual(0, count); 
+        }
+
+        [Test(Description = "Query after deleting all entities returns empty")] 
+        public void QueryAfterDeletingAllEntitiesReturnsEmpty() 
+        { 
+            var ecs = new StackEcs(); 
+            var e1 = ecs.CreateEntity(); 
+            var e2 = ecs.CreateEntity(); 
+            e1.AddComponent<int>(); 
+            e2.AddComponent<int>(); 
+            e1.Delete(); 
+            e2.Delete(); 
+            var entities = ecs.Query.Include<int>(); 
+            int count = 0; 
+            foreach (var entity in entities) count++; 
+            Assert.AreEqual(0, count); 
         }
     }
 }

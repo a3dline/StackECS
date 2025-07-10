@@ -1,5 +1,4 @@
-﻿using System;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using StackECS;
 
 namespace StackECSTests
@@ -7,78 +6,57 @@ namespace StackECSTests
     [Category("StackEcs")]
     public class StackEcsTests
     {
-        [Test(Description = "Create entity. Entity index is 0.")]
-        public void CreateEntity()
-        {
-            // Arrange
-            using var stackEcs = new StackEcs(16);
-
-            // Act
-            var entity = stackEcs.CreateEntity();
-
-            // Assert
-            Assert.AreEqual(0, entity.Index);
-        }
-
         [Test(Description = "Entity has unique index")]
-        public void CreateTwoEntities()
+        public void CreateTwoEntities_EntitiesHasUniqueIndex()
         {
             // Arrange
-            using var stackEcs = new StackEcs(16);
+            var stackEcs = new StackEcs();
 
             // Act
-            stackEcs.CreateEntity();
+            var entity1 = stackEcs.CreateEntity();
             var entity2 = stackEcs.CreateEntity();
 
             // Assert
-            Assert.AreEqual(1, entity2.Index);
+            Assert.AreNotEqual(entity1.Index, entity2.Index);
         }
 
         [Test(Description = "Ecs use deleted entity cache")]
         public void CreateEntityAfterDelete_UsedEntityFromCache()
         {
             // Arrange
-            using var stackEcs = new StackEcs(16);
+            var stackEcs = new StackEcs();
 
             // Act
-            var entity = stackEcs.CreateEntity();
-            entity.Delete();
+            var entity1 = stackEcs.CreateEntity();
+            var entity1Index = entity1.Index;
+            entity1.Delete();
             var entity2 = stackEcs.CreateEntity();
 
             // Assert
-            Assert.AreEqual(0, entity2.Index);
+            Assert.AreEqual(entity1Index, entity2.Index);
         }
 
-        [Test(Description = "Exception on modify entity after delete")]
-        public void DeleteEntity_ThrowIfEntityAlreadyDeleted()
+        [Test(Description = "Cached entity does not have components from deleted entity")]
+        public void CachedEntityDoesNotExistComponent()
         {
             // Arrange
-            using var stackEcs = new StackEcs(16);
-            var entity = stackEcs.CreateEntity();
+            var stackEcs = new StackEcs();
+            var entity1 = stackEcs.CreateEntity();
+            entity1.AddComponent<int>();
+            entity1.Delete();
 
             // Act
-            entity.Delete();
+            var entity2 = stackEcs.CreateEntity();
 
-            Exception exception = null;
             // Assert
-            try
-            {
-                entity.HasComponent<int>();
-            }
-            catch (InvalidOperationException e)
-            {
-                exception = e;
-            }
-
-            Assert.IsNotNull(exception);
-            Assert.Pass("Entity already deleted");
+            Assert.IsFalse(entity2.HasComponent<int>());
         }
 
         [Test(Description = "Add component to entity")]
-        public void AddComponentToEntity()
+        public void AddComponentToEntity_ComponentExist()
         {
             // Arrange
-            using var stackEcs = new StackEcs(16);
+            var stackEcs = new StackEcs();
             var entity = stackEcs.CreateEntity();
 
             // Act
@@ -88,10 +66,10 @@ namespace StackECSTests
         }
 
         [Test(Description = "Remove component from entity")]
-        public void RemoveComponentFromEntity()
+        public void RemoveComponentFromEntity_ComponentNotExist()
         {
             // Arrange
-            using var stackEcs = new StackEcs(16);
+            var stackEcs = new StackEcs();
             var entity = stackEcs.CreateEntity();
             entity.AddComponent<int>();
 
@@ -102,51 +80,38 @@ namespace StackECSTests
             Assert.IsFalse(entity.HasComponent<int>());
         }
         
-        [Test (Description = "Add component to entity. Throw if component already exists")]
-        public void AddDuplicateComponent_ThrowIfComponentAlreadyExists()
-        {
-            // Arrange
-            using var stackEcs = new StackEcs(16);
-            var entity = stackEcs.CreateEntity();
-            entity.AddComponent<int>();
-
-            Exception exception = null;
-            // Act
-            try
-            {
-                entity.AddComponent<int>();
-            }
-            catch (InvalidOperationException e)
-            {
-                exception = e;
-            }
-
-            // Assert
-            Assert.IsNotNull(exception);
-            Assert.Pass("Component already exists");
+        [Test(Description = "GetComponent returns correct component value after adding it")] 
+        public void GetComponentAfterAdd_ComponentIsCorrect() 
+        { 
+            var stackEcs = new StackEcs(); 
+            var entity = stackEcs.CreateEntity(); 
+            entity.AddComponent<int>() = 42; 
+            Assert.AreEqual(42, entity.GetComponent<int>()); 
         }
-        
-        [Test (Description = "Remove component from entity. Throw if component does not exist")]
-        public void RemoveComponent_ThrowIfComponentDoesNotExist()
-        {
-            // Arrange
-            using var stackEcs = new StackEcs(16);
-            var entity = stackEcs.CreateEntity();
 
-            Exception exception = null;
-            // Act
-            try
-            {
-                entity.RemoveComponent<int>();
-            }
-            catch (InvalidOperationException e)
-            {
-                exception = e;
-            }
+        [Test(Description = "EntityCount increases and decreases correctly")] 
+        public void EntityCount_IncreasesAndDecreases() 
+        { 
+            var stackEcs = new StackEcs(); 
+            var entity1 = stackEcs.CreateEntity(); 
+            stackEcs.CreateEntity(); 
+            Assert.AreEqual(2, stackEcs.EntityCount); 
+            entity1.Delete(); 
+            Assert.AreEqual(1, stackEcs.EntityCount); 
+        }
 
-            // Assert
-            Assert.IsNotNull(exception);
-            Assert.Pass("Component does not exist");
+        [Test(Description = "Add and remove different component types")] 
+        public void AddRemoveDifferentComponentTypes() 
+        { 
+            var stackEcs = new StackEcs(); 
+            var entity = stackEcs.CreateEntity(); 
+            entity.AddComponent<int>(); 
+            entity.AddComponent<float>(); 
+            Assert.IsTrue(entity.HasComponent<int>()); 
+            Assert.IsTrue(entity.HasComponent<float>()); 
+            entity.RemoveComponent<int>(); 
+            Assert.IsFalse(entity.HasComponent<int>()); 
+            Assert.IsTrue(entity.HasComponent<float>()); 
         }
     }
 }

@@ -1,34 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using Unity.Profiling;
-using UnityEngine.Pool;
+﻿using System.Collections.Generic;
+using StackECS.Pools;
 
 namespace StackECS
 {
-    internal class StackEcs : IEcs, IDisposable
+    internal class StackEcs : IEcs
     {
-        private readonly Dictionary<ulong, Archetype> _archetypes = new();
-        private readonly IComponentPool[] _componentPools = new IComponentPool[64];
-        private readonly Queue<uint> _freeEntities = new();
-        private readonly int _capacity;
+        private readonly Dictionary<BitMask, Archetype> _archetypes = new();
+        private readonly List<Archetype> _filteredArchetypes;
+        private readonly Stack<uint> _freeEntities = new();
+        private readonly StackEcsParameters _parameters;
+
+        private IComponentPool[] _componentPools;
         private uint _lastEntityId;
         private int _lastTypeIndex;
-        private int[] _typeIndexes = new int[64];
+        private int[] _typeIndexes;
 
-        public StackEcs(int capacity)
+        public StackEcs(StackEcsParameters parameters = null)
         {
-            _capacity = capacity;
+            _parameters = parameters ?? new StackEcsParameters();
+            _typeIndexes = new int[_parameters.InitialTypeCapacity];
+            HeapPool = new HeapPool(_parameters.InitialTypeCapacity);
+            _filteredArchetypes = new List<Archetype>(_parameters.InitialTypeCapacity);
+            _componentPools = new IComponentPool[_parameters.InitialTypeCapacity];
         }
+
+        internal HeapPool HeapPool { get; }
 
         public int EntityCount => (int)_lastEntityId - _freeEntities.Count;
 
-        public void Dispose() { }
-
         public Entity CreateEntity()
         {
-            var archetype = GetArchetype(0);
-            var entity = _freeEntities.Count > 0 ? _freeEntities.Dequeue() : _lastEntityId++;
+            var archetype = GetArchetype(new BitMask(HeapPool));
+            var entity = _freeEntities.Count > 0 ? _freeEntities.Pop() : _lastEntityId++;
             archetype.AddEntity(entity);
             return new Entity(entity, archetype, this);
         }
@@ -37,58 +40,66 @@ namespace StackECS
 
         public void RemoveEntity(uint entity)
         {
-            _freeEntities.Enqueue(entity);
+            _freeEntities.Push(entity);
         }
 
         public ref T AddComponent<T>(uint entity, int typeIndex) where T : unmanaged
         {
-            var pool = GetComponentPool<T>(typeIndex);
+            var pool = GetOrCreateComponentPool<T>(typeIndex);
             return ref pool.Add(entity);
         }
 
         public ref T GetComponent<T>(uint entity, int typeIndex) where T : unmanaged
         {
-            var pool = GetComponentPool<T>(typeIndex);
+            var pool = GetOrCreateComponentPool<T>(typeIndex);
             return ref pool.Get(entity);
         }
-        
-        private Archetype[] _filteredArchetypes = new Archetype[64];
 
-        public EntityEnumerator GetEntityEnumerator(BitArray64 include, BitArray64 exclude)
+        public EntityEnumerator GetEntityEnumerator(BitMask include, BitMask exclude)
         {
+            _filteredArchetypes.Clear();
             var values = _archetypes.Values;
-            var length = 0;
             foreach (var archetype in values)
                 if (archetype.Match(include, exclude))
-                {
-                    _filteredArchetypes[length++] = archetype;
-                }
+                    _filteredArchetypes.Add(archetype);
 
-            return new EntityEnumerator(_filteredArchetypes, length, _capacity);
-            
+            return new EntityEnumerator(_filteredArchetypes, HeapPool);
         }
 
-        public Archetype GetArchetype(ulong hash)
+        public Archetype GetArchetype(BitMask mask)
         {
-            if (_archetypes.TryGetValue(hash, out var pool)) return pool;
+            if (_archetypes.TryGetValue(mask, out var pool)) return pool;
 
-            pool = new Archetype(hash, _capacity);
-            _archetypes.Add(hash, pool);
+            pool = new Archetype(mask, _parameters.InitialDataCapacity);
+            _archetypes.Add(mask, pool);
             return pool;
+        }
+
+        public void RemoveArchetype(Archetype archetype)
+        {
+            if (archetype.Mask.GetHashCode() == 0) return; // Avoid removing the empty archetype
+            _archetypes.Remove(archetype.Mask);
         }
 
         public int GetTypeIndex<T>()
         {
             var typeIdIndex = TypeId<T>.Id;
-            if (_typeIndexes[typeIdIndex] == 0) _typeIndexes[typeIdIndex] = ++_lastTypeIndex;
+            if (_typeIndexes[typeIdIndex] == 0)
+            {
+                ArrayUtilities.ResizeArray(ref _typeIndexes, typeIdIndex + 1);
+                _typeIndexes[typeIdIndex] = ++_lastTypeIndex;
+            }
+
             return _typeIndexes[typeIdIndex];
         }
 
-        private ComponentPool<T> GetComponentPool<T>(int typeIndex) where T : unmanaged
+        private ComponentPool<T> GetOrCreateComponentPool<T>(int typeIndex) where T : unmanaged
         {
+            ArrayUtilities.ResizeArray(ref _componentPools, typeIndex + 1);
+
             if (_componentPools[typeIndex] == null)
             {
-                var pool = new ComponentPool<T>(_capacity);
+                var pool = new ComponentPool<T>(_parameters.InitialDataCapacity);
                 _componentPools[typeIndex] = pool;
                 return pool;
             }

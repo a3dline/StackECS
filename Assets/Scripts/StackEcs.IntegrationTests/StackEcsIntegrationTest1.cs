@@ -12,7 +12,7 @@ namespace StackEcs.IntegrationTests
         [UnityTest]
         public IEnumerator Test()
         {
-            using var client = new StackEcsClient(10);
+            var client = new StackEcsClient();
 
             var addMovementSystem = new AddMovementSystem();
 

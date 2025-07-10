@@ -11,7 +11,7 @@ namespace StackECSTests
         public void QueryTests()
         {
             const int count = 256 * 256;
-            var client = new StackEcsClient(count);
+            var client = new StackEcsClient();
             for (var i = 0; i < count; i++)
             {
                 var entity = client.Ecs.CreateEntity();

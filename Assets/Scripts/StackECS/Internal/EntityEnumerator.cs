@@ -1,74 +1,52 @@
 ﻿using System.Collections.Generic;
+using StackECS.Pools;
 
 namespace StackECS
 {
-    internal static class Pool
+    internal readonly struct EntityEnumeratorEntry
     {
-        private static Queue<EntityEnumerator.Entry[]> _pool = new(2); 
-        
-        public static EntityEnumerator.Entry[] Rent(int initialCapacity)
+        public readonly uint Id;
+        public readonly Archetype Archetype;
+
+        public EntityEnumeratorEntry(uint id, Archetype archetype)
         {
-            if(_pool.Count == 0)
-            {
-                var array = new EntityEnumerator.Entry[initialCapacity];
-                return array;
-            }
-            else
-            {
-                return _pool.Dequeue();
-            }
-        }
-        
-        public static void Return(EntityEnumerator.Entry[] array)
-        {
-            _pool.Enqueue(array);
+            Id = id;
+            Archetype = archetype;
         }
     }
-    
+
     internal struct EntityEnumerator
     {
-        public readonly struct Entry
-        {
-            public readonly uint Id;
-            public readonly Archetype Archetype;
-
-            public Entry(uint id, Archetype archetype)
-            {
-                Id = id;
-                Archetype = archetype;
-            }
-        }
+        private readonly IEntityEnumeratorEntryListPool _pool;
 
         private int _index;
-        private Entry[] _entities;
-        private int _entityCount;
+        private List<EntityEnumeratorEntry> _entities;
 
-        public EntityEnumerator(Archetype[] archetypes, int archetypeLength, int capacity)
+        public EntityEnumerator(IReadOnlyList<Archetype> archetypes, IEntityEnumeratorEntryListPool pool)
         {
-            _entities = Pool.Rent(capacity);
+            _pool = pool;
+            _entities = pool.Rent();
 
-            var length = 0;
-            for (int i = 0; i < archetypeLength; i++)
+            var archetypeLength = archetypes.Count;
+            for (var i = 0; i < archetypeLength; i++)
             {
                 var archetype = archetypes[i];
-                for (int j = 0; j < archetype.EntityCount; j++)
-                {
-                    _entities[length++] = new Entry(archetype[j], archetype);
-                } 
+                for (var j = 0; j < archetype.EntityCount; j++)
+                    _entities.Add(new EntityEnumeratorEntry(archetype[j], archetype));
             }
+
             _index = -1;
-            _entityCount = length;
         }
-        
+
         public bool MoveNext()
         {
-            if (++_index < _entityCount) return true;
-            Pool.Return(_entities);
+            if (++_index < _entities.Count) return true;
+            _pool.Return(_entities);
             _entities = null;
             return false;
         }
 
-        public ref Entry Current => ref _entities[_index];
+        public EntityEnumeratorEntry Current => _entities[_index];
 
         public EntityEnumerator GetEnumerator()
         {

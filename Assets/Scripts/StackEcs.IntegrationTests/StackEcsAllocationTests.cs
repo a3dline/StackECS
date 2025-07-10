@@ -14,7 +14,7 @@ namespace StackEcs.IntegrationTests
             const int entityCount = 1024;
             const int testFrameCount = 100;
 
-            using var client = new StackEcsClient(entityCount);
+            var client = new StackEcsClient();
             client.AddSystem(new ModifyEntitySystem(entityCount));
             client.Init();
 
@@ -32,7 +32,7 @@ namespace StackEcs.IntegrationTests
             const int entityCount = 1024;
             const int testFrameCount = 100;
 
-            using var client = new StackEcsClient(entityCount);
+            var client = new StackEcsClient();
             client.AddSystem(new ChangeArchetypeSystem(entityCount));
             client.Init();
 

@@ -10,7 +10,7 @@ namespace StackECSTests
         public void RemoveEmptyEntitiesAfterUpdate()
         {
             // Arrange
-            using var client = new StackEcsClient(16);
+            var client = new StackEcsClient();
             client.Init();
             
             client.Ecs.CreateEntity();
@@ -26,7 +26,7 @@ namespace StackECSTests
         public void EntityCountAfterRemove()
         {
             // Arrange
-            using var client = new StackEcsClient(16);
+            var client = new StackEcsClient();
             client.Init();
             
             client.Ecs.CreateEntity();
