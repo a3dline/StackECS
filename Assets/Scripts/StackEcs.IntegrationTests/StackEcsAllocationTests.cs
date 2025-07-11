@@ -6,13 +6,14 @@ using UnityEngine.TestTools;
 
 namespace StackEcs.IntegrationTests
 {
+    // Run debugger to see allocation result per frame
     public class StackEcsAllocationTests
     {
         [UnityTest]
         public IEnumerator TestGetComponent()
         {
             const int entityCount = 1024;
-            const int testFrameCount = 100;
+            const int testFrameCount = 1000;
 
             var client = new StackEcsClient();
             client.AddSystem(new ModifyEntitySystem(entityCount));
@@ -30,7 +31,7 @@ namespace StackEcs.IntegrationTests
         public IEnumerator ChangeArchetype()
         {
             const int entityCount = 1024;
-            const int testFrameCount = 100;
+            const int testFrameCount = 1000;
 
             var client = new StackEcsClient();
             client.AddSystem(new ChangeArchetypeSystem(entityCount));

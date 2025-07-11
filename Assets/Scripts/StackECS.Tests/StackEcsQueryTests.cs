@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 using StackECS;
 
 namespace StackECSTests
@@ -11,7 +12,7 @@ namespace StackECSTests
         {
             // Arrange
             var ecs = new StackEcs();
-            
+
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
             var entity2 = ecs.CreateEntity();
@@ -22,29 +23,23 @@ namespace StackECSTests
             // Act
             var entities = ecs.Query.Include<int>();
             var intCount = 0;
-            foreach (var enity in entities)
-            {
-                 intCount++;
-            }
-            
+            foreach (var enity in entities) intCount++;
+
             entities = ecs.Query.Include<float>();
             var floatCount = 0;
-            foreach (var enity in entities)
-            {
-                floatCount++;
-            }
-            
+            foreach (var enity in entities) floatCount++;
+
             // Assert
             Assert.AreEqual(2, intCount);
             Assert.AreEqual(1, floatCount);
         }
-        
+
         [Test(Description = "Query can return entities with two components ore more")]
         public void GetEntitiesWithTwoComponents()
         {
             // Arrange
             var ecs = new StackEcs();
-            
+
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
             entity1.AddComponent<float>();
@@ -57,11 +52,8 @@ namespace StackECSTests
             // Act
             var entities = ecs.Query.Include<int>().Include<float>();
             var intFloatCount = 0;
-            foreach (var enity in entities)
-            {
-                 intFloatCount++;
-            }
-            
+            foreach (var enity in entities) intFloatCount++;
+
             // Assert
             Assert.AreEqual(2, intFloatCount);
         }
@@ -71,7 +63,7 @@ namespace StackECSTests
         {
             // Arrange
             var ecs = new StackEcs();
-            
+
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
             entity1.AddComponent<float>();
@@ -85,11 +77,8 @@ namespace StackECSTests
             // Act
             var entities = ecs.Query.Exclude<float>();
             var count = 0;
-            foreach (var enity in entities)
-            {
-                 count++;
-            }
-            
+            foreach (var enity in entities) count++;
+
             // Assert
             Assert.AreEqual(2, count);
         }
@@ -99,7 +88,7 @@ namespace StackECSTests
         {
             // Arrange
             var ecs = new StackEcs();
-            
+
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
             entity1.AddComponent<float>();
@@ -113,11 +102,8 @@ namespace StackECSTests
             // Act
             var entities = ecs.Query.Include<int>().Exclude<float>();
             var count = 0;
-            foreach (var enity in entities)
-            {
-                 count++;
-            }
-            
+            foreach (var enity in entities) count++;
+
             // Assert
             Assert.AreEqual(1, count);
         }
@@ -127,7 +113,7 @@ namespace StackECSTests
         {
             // Arrange            
             var ecs = new StackEcs();
-            
+
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
             var entity2 = ecs.CreateEntity();
@@ -138,41 +124,33 @@ namespace StackECSTests
             entity3.AddComponent<float>();
             var entity4 = ecs.CreateEntity();
             entity4.AddComponent<bool>();
-            
+
             // Act
             var entities = ecs.Query.Include<int>();
             var intCount = 0;
-            foreach (var enity in entities)
-            {
-                 intCount++;
-            }
-            
+            foreach (var enity in entities) intCount++;
+
             entities = ecs.Query.Include<float>();
             var floatCount = 0;
-            foreach (var enity in entities)
-            {
-                floatCount++;
-            }
-            
+            foreach (var enity in entities) floatCount++;
+
             entities = ecs.Query.Include<bool>();
             var boolCount = 0;
-            foreach (var enity in entities)
-            {
-                boolCount++;
-            }
-            
+            foreach (var enity in entities) boolCount++;
+
             // Assert
             Assert.AreEqual(2, intCount);
             Assert.AreEqual(2, floatCount);
             Assert.AreEqual(2, boolCount);
-        } 
-        
-        [Test(Description = "Query can be cached and reused for enumerate entities")]
+        }
+
+        [Test(Description =
+                     "Query can not be cached and reused for enumerate entities. Throw exception if try to reuse query")]
         public void CachedQuery()
         {
             // Arrange
             var ecs = new StackEcs();
-            
+
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
             var entity2 = ecs.CreateEntity();
@@ -182,22 +160,21 @@ namespace StackECSTests
 
             // Act
             var cacheQuery = ecs.Query.Include<int>();
-            
-            var intCount1 = 0;
-            foreach (var enity in cacheQuery)
+
+            foreach (var _ in cacheQuery) { }
+
+            Exception exception = null;
+            try
             {
-                 intCount1++;
+                foreach (var _ in cacheQuery) { } 
             }
-            
-            var intCount2 = 0;
-            foreach (var entity in cacheQuery)
+            catch (InvalidOperationException e)
             {
-                intCount2++;
+                exception = e;
             }
-            
+
             // Assert
-            Assert.AreEqual(2, intCount1);
-            Assert.AreEqual(2, intCount2);
+            Assert.That(exception, Is.Not.Null);
         }
 
         [Test(Description = "Query can be changed after use")]
@@ -205,7 +182,7 @@ namespace StackECSTests
         {
             // Arrange
             var ecs = new StackEcs();
-            
+
             var entity1 = ecs.CreateEntity();
             entity1.AddComponent<int>();
             var entity2 = ecs.CreateEntity();
@@ -215,62 +192,56 @@ namespace StackECSTests
 
             // Act
             var cacheQuery = ecs.Query.Include<int>();
-            
+
             var intCount1 = 0;
-            foreach (var enity in cacheQuery)
-            {
-                 intCount1++;
-            }
-            
+            foreach (var enity in cacheQuery) intCount1++;
+
             cacheQuery = ecs.Query.Include<float>();
-            
+
             var intFloatCount = 0;
-            foreach (var entity in cacheQuery)
-            {
-                intFloatCount++;
-            }
-            
+            foreach (var entity in cacheQuery) intFloatCount++;
+
             // Assert
             Assert.AreEqual(2, intCount1);
             Assert.AreEqual(1, intFloatCount);
         }
 
-        [Test(Description = "Query returns empty if no entities")] 
-        public void QueryReturnsEmptyIfNoEntities() 
-        { 
-            var ecs = new StackEcs(); 
-            var entities = ecs.Query.Include<int>(); 
-            int count = 0; 
-            foreach (var entity in entities) count++; 
-            Assert.AreEqual(0, count); 
+        [Test(Description = "Query returns empty if no entities")]
+        public void QueryReturnsEmptyIfNoEntities()
+        {
+            var ecs = new StackEcs();
+            var entities = ecs.Query.Include<int>();
+            var count = 0;
+            foreach (var entity in entities) count++;
+            Assert.AreEqual(0, count);
         }
 
-        [Test(Description = "Query by non-existent component returns empty")] 
-        public void QueryByNonExistentComponentReturnsEmpty() 
-        { 
-            var ecs = new StackEcs(); 
-            var e = ecs.CreateEntity(); 
-            e.AddComponent<float>(); 
-            var entities = ecs.Query.Include<int>(); 
-            int count = 0; 
-            foreach (var entity in entities) count++; 
-            Assert.AreEqual(0, count); 
+        [Test(Description = "Query by non-existent component returns empty")]
+        public void QueryByNonExistentComponentReturnsEmpty()
+        {
+            var ecs = new StackEcs();
+            var e = ecs.CreateEntity();
+            e.AddComponent<float>();
+            var entities = ecs.Query.Include<int>();
+            var count = 0;
+            foreach (var entity in entities) count++;
+            Assert.AreEqual(0, count);
         }
 
-        [Test(Description = "Query after deleting all entities returns empty")] 
-        public void QueryAfterDeletingAllEntitiesReturnsEmpty() 
-        { 
-            var ecs = new StackEcs(); 
-            var e1 = ecs.CreateEntity(); 
-            var e2 = ecs.CreateEntity(); 
-            e1.AddComponent<int>(); 
-            e2.AddComponent<int>(); 
-            e1.Delete(); 
-            e2.Delete(); 
-            var entities = ecs.Query.Include<int>(); 
-            int count = 0; 
-            foreach (var entity in entities) count++; 
-            Assert.AreEqual(0, count); 
+        [Test(Description = "Query after deleting all entities returns empty")]
+        public void QueryAfterDeletingAllEntitiesReturnsEmpty()
+        {
+            var ecs = new StackEcs();
+            var e1 = ecs.CreateEntity();
+            var e2 = ecs.CreateEntity();
+            e1.AddComponent<int>();
+            e2.AddComponent<int>();
+            e1.Delete();
+            e2.Delete();
+            var entities = ecs.Query.Include<int>();
+            var count = 0;
+            foreach (var entity in entities) count++;
+            Assert.AreEqual(0, count);
         }
     }
 }

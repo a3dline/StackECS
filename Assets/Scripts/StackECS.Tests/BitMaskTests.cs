@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using StackECS;
+using StackECS.Pools;
 
 namespace StackECSTests
 {

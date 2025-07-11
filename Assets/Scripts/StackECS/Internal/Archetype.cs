@@ -1,4 +1,5 @@
 ﻿using System;
+using StackECS.Pools;
 
 namespace StackECS
 {
@@ -47,16 +48,6 @@ namespace StackECS
             }
 
             EntityCount--;
-        }
-
-        public BitMask GetMaskWithIndex(int index)
-        {
-            return Mask.CopyWithBit(index);
-        }
-
-        public BitMask GetMaskWithoutIndex(int index)
-        {
-            return Mask.CopyWithoutBit(index);
         }
 
         public bool Match(BitMask include, BitMask exclude)

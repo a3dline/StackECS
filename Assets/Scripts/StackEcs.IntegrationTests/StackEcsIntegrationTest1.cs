@@ -31,7 +31,7 @@ namespace StackEcs.IntegrationTests
             client.Update();
             yield return null;
 
-            var result = new Vector2[10];
+            var result = new Vector2[100];
             
             
             foreach (var entity in client.Ecs.Query

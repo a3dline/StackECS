@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using StackECS.Pools;
 
 namespace StackECS
 {
@@ -13,7 +14,6 @@ namespace StackECS
         private readonly StackEcsParameters _parameters;
         private readonly SpanStorage<int> _spanStorageInt;
         private readonly SpanStorage<uint> _spanStorageUint;
-        private readonly Archetype _emptyArchetype;
         private uint _lastEntityId;
         private int _lastTypeIndex;
         private int[] _typeIndexes = new int[64];
@@ -30,11 +30,11 @@ namespace StackECS
             _spanStorageUint = new SpanStorage<uint>(_parameters.EntityMaxCount);
 
             EntityEnumeratorEntryArrayPool = new EntityEnumeratorEntryArrayPool(_parameters.EntityMaxCount);
-            _emptyArchetype = GetArchetype(new BitMask(SpanStorageUlong));
         }
 
         internal SpanStorage<ulong> SpanStorageUlong { get; }
         internal EntityEnumeratorEntryArrayPool EntityEnumeratorEntryArrayPool { get; }
+        internal int ArchetypeCount => _archetypes.Count;
         public int EntityCount => (int)_lastEntityId - _freeEntities.Count;
 
         public Entity CreateEntity()
@@ -45,8 +45,9 @@ namespace StackECS
                 throw new
                     InvalidOperationException("Entity limit reached. Increase EntityMaxCount in StackEcsParameters.");
 
-            _emptyArchetype.AddEntity(entity);
-            return new Entity(entity, _emptyArchetype, this);
+            var archetype = GetArchetype(new BitMask(SpanStorageUlong));
+            archetype.AddEntity(entity);
+            return new Entity(entity, archetype, this);
         }
 
         public EcsQuery Query => new(this);
@@ -95,7 +96,6 @@ namespace StackECS
 
         public void RemoveArchetype(Archetype archetype)
         {
-            if (ReferenceEquals(archetype, _emptyArchetype)) return;
             _archetypes.Remove(archetype.Mask.GetHashCode());
             archetype.Release();
         }

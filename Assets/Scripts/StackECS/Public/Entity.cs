@@ -27,7 +27,7 @@ namespace StackECS
             var typeId = _ecs.GetTypeIndex<T>();
             if (_archetype.Mask[typeId]) throw new InvalidOperationException("Component already exists");
 
-            var newMask = _archetype.GetMaskWithIndex(typeId);
+            var newMask = _archetype.Mask.CopyWithBit(typeId);
             _archetype.RemoveEntity(_id);
             if (_archetype.EntityCount == 0) _ecs.RemoveArchetype(_archetype);
 
@@ -43,7 +43,7 @@ namespace StackECS
             var typeId = _ecs.GetTypeIndex<T>();
             if (!_archetype.Mask[typeId]) throw new InvalidOperationException("Component does not exist");
 
-            var newMask = _archetype.GetMaskWithoutIndex(typeId);
+            var newMask = _archetype.Mask.CopyWithoutBit(typeId);
             _archetype.RemoveEntity(_id);
             if (_archetype.EntityCount == 0) _ecs.RemoveArchetype(_archetype);
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace StackECS
+namespace StackECS.Pools
 {
     public class SpanStorage<T> where T : unmanaged
     {

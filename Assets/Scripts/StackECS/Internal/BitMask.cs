@@ -1,8 +1,9 @@
 ﻿using System;
+using StackECS.Pools;
 
 namespace StackECS
 {
-    internal struct BitMask
+    internal struct BitMask : IEquatable<BitMask>
     {
         private readonly SpanStorage<ulong> _spanStorage;
         private readonly Slot _slot;
@@ -12,7 +13,7 @@ namespace StackECS
         {
             _spanStorage = spanStorage;
             _slot = spanStorage.ReserveSlot();
-            _hash = 0;
+            _hash = GetHash(_spanStorage.GetSpan(in _slot));
         }
 
         private BitMask(SpanStorage<ulong> spanStorage, Slot slot)
@@ -78,17 +79,6 @@ namespace StackECS
             return copyMask;
         }
 
-        public BitMask Copy()
-        {
-            var data = _spanStorage.GetSpan(in _slot);
-
-            var copySlot = _spanStorage.ReserveSlot();
-            var copyData = _spanStorage.GetSpan(in copySlot);
-            data.CopyTo(copyData);
-
-            return new BitMask(_spanStorage, copySlot);
-        }
-
         public override int GetHashCode()
         {
             // ReSharper disable once NonReadonlyMemberInGetHashCode
@@ -100,6 +90,8 @@ namespace StackECS
             var aData = a._spanStorage.GetSpan(in a._slot);
             var bData = b._spanStorage.GetSpan(in b._slot);
 
+            // BitMask data lengths are always the same since they use the same SpanStorage
+            // No need to check for different lengths or handle padding
             for (var i = 0; i < aData.Length; i++)
                 if (aData[i] != bData[i])
                     return false;
@@ -152,7 +144,24 @@ namespace StackECS
         {
             var hash = 17;
             for (var i = 0; i < data.Length; i++) hash = hash * 31 + data[i].GetHashCode();
+
             return hash;
+        }
+
+        public bool Equals(BitMask other)
+        {
+            return this == other;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is BitMask)
+            {
+                var other = (BitMask)obj;
+                return Equals(other);
+            }
+
+            return false;
         }
     }
 }

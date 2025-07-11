@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Unity.Profiling;
 
 namespace StackECS
 {
@@ -11,6 +12,8 @@ namespace StackECS
 
     public class StackEcsClient
     {
+        private static readonly ProfilerMarker UpdateMarker = new("StackECS.Update");
+
         private readonly StackEcs _ecs;
         private readonly Archetype[] _emptyArchetype = new Archetype [1];
         private readonly List<IEcsInitSystem> _initSystems = new();
@@ -38,13 +41,16 @@ namespace StackECS
 
         public void Update()
         {
-            foreach (var system in _updateSystems) system.Update(_ecs);
-
-            var emptyEntityEnumerator = new EntityEnumerator(_emptyArchetype, _ecs.EntityEnumeratorEntryArrayPool);
-            foreach (var entity in emptyEntityEnumerator)
+            using (UpdateMarker.Auto())
             {
-                var entityInstance = new Entity(entity.Id, entity.Archetype, _ecs);
-                entityInstance.Delete();
+                foreach (var system in _updateSystems) system.Update(_ecs);
+
+                var emptyEntityEnumerator = new EntityEnumerator(_emptyArchetype, _ecs.EntityEnumeratorEntryArrayPool);
+                foreach (var entity in emptyEntityEnumerator)
+                {
+                    var entityInstance = new Entity(entity.Id, entity.Archetype, _ecs);
+                    entityInstance.Delete();
+                }
             }
         }
     }

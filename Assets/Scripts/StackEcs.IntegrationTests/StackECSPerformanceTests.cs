@@ -10,7 +10,7 @@ namespace StackEcs.IntegrationTests
     public class StackEcsPerformanceTests
     {
         [UnityTest]
-        public IEnumerator SeparateOperationsSpeed()
+        public IEnumerator QueryOperationsSpeed()
         {
             const int count = 256 * 256;
             var parameters = new StackEcsParameters
@@ -32,72 +32,20 @@ namespace StackEcs.IntegrationTests
             yield return null;
 
             sw.Restart();
-            var entities = client.Ecs.Query.Include<PositionComponent>().GetEnumerator();
-            var querySpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Query speed: {querySpeed} ms");
+            var entities1 = client.Ecs.Query.Include<PositionComponent>().GetEnumerator();
+            var querySpeed1 = sw.ElapsedMilliseconds;
+            Debug.Log($"Query all entities speed: {querySpeed1} ms");
 
             yield return null;
 
             sw.Restart();
-            foreach (var entity in entities) entity.GetComponent<PositionComponent>();
-            var getComponentSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Get component speed: {getComponentSpeed} ms");
+            var entities2 = client.Ecs.Query.Include<MovementComponent>().GetEnumerator();
+            var querySpeed2 = sw.ElapsedMilliseconds;
+            Debug.Log($"Query 1/8 entities speed: {querySpeed2} ms");
         }
 
         [UnityTest]
-        public IEnumerator ChangeEntitiesInArchetypeTest()
-        {
-            const int count = 256 * 256;
-            var parameters = new StackEcsParameters
-                             {
-                                 EntityMaxCount = count,
-                                 ComponentTypeMaxCount = 8
-                             };
-            var ecs = new StackEcsClient(parameters);
-
-            var sw = new Stopwatch();
-
-            yield return null;
-
-            sw.Start();
-            for (var i = 0; i < count; i++)
-            {
-                var entity = ecs.Ecs.CreateEntity();
-                entity.AddComponent<PositionComponent>();
-                if (i % 8 == 0) entity.AddComponent<MovementComponent>();
-            }
-
-            var createAndAddComponentSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Create and add component speed: {createAndAddComponentSpeed} ms");
-
-            yield return null;
-
-            sw.Restart();
-            foreach (var entity in ecs.Ecs.Query.Include<MovementComponent>()) entity.GetComponent<MovementComponent>();
-            var getComponentSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Get component speed: {getComponentSpeed} ms");
-
-            yield return null;
-
-            sw.Restart();
-            foreach (var entity in ecs.Ecs.Query.Include<MovementComponent>())
-                entity.AddComponent<IndexEntityComponent>();
-            var changeArchetypeSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Change archetype speed: {changeArchetypeSpeed} ms");
-
-            yield return null;
-
-            sw.Restart();
-            foreach (var entity in ecs.Ecs.Query.Include<MovementComponent>())
-                entity.RemoveComponent<MovementComponent>();
-            var removeComponentSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Remove component with change archetype: {removeComponentSpeed} ms");
-
-            yield return new WaitForSeconds(0.33f);
-        }
-
-        [UnityTest]
-        public IEnumerator ChangeAllentitiesTests()
+        public IEnumerator ChangeAllEntitiesTests()
         {
             const int count = 256 * 256;
             var parameters = new StackEcsParameters
@@ -107,6 +55,12 @@ namespace StackEcs.IntegrationTests
             };
             var ecs = new StackEcsClient(parameters);
 
+            //Warm up
+            var warmEntity = ecs.Ecs.CreateEntity();
+            warmEntity.AddComponent<PositionComponent>();
+            warmEntity.AddComponent<MovementComponent>();
+            warmEntity.Delete();
+            
             var sw = new Stopwatch();
 
             yield return null;
@@ -115,11 +69,21 @@ namespace StackEcs.IntegrationTests
             for (var i = 0; i < count; i++)
             {
                 var entity = ecs.Ecs.CreateEntity();
+            }
+            
+            var createAndAddComponentSpeed = sw.ElapsedMilliseconds;
+            Debug.Log($"Create entity speed: {createAndAddComponentSpeed} ms");
+            
+            yield return null;
+            
+            sw.Start();
+            foreach (var entity in ecs.Ecs.Query) 
+            {
                 entity.AddComponent<PositionComponent>();
             }
-
-            var createAndAddComponentSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Create and add component speed: {createAndAddComponentSpeed} ms");
+            
+            var addComponentSpeed = sw.ElapsedMilliseconds;
+            Debug.Log($"Add component speed : {addComponentSpeed} ms");
 
             yield return null;
 
@@ -133,7 +97,7 @@ namespace StackEcs.IntegrationTests
             sw.Restart();
             foreach (var entity in ecs.Ecs.Query.Include<PositionComponent>()) entity.AddComponent<MovementComponent>();
             var changeArchetypeSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Change archetype speed: {changeArchetypeSpeed} ms");
+            Debug.Log($"Change archetype speed (Add component): {changeArchetypeSpeed} ms");
 
             yield return null;
 
@@ -141,7 +105,7 @@ namespace StackEcs.IntegrationTests
             foreach (var entity in ecs.Ecs.Query.Include<PositionComponent>())
                 entity.RemoveComponent<PositionComponent>();
             var removeComponentSpeed = sw.ElapsedMilliseconds;
-            Debug.Log($"Remove component with change archetype: {removeComponentSpeed} ms");
+            Debug.Log($"Change archetype speed (Remove Component): {removeComponentSpeed} ms");
 
             yield return new WaitForSeconds(0.33f);
         }
