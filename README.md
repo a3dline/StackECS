@@ -104,3 +104,18 @@ See [README.hello-world.md](README.hello-world.md) for a full Unity-style Hello 
 ---
 
 Stack ECS is a fast, concise, and convenient ECS for Unity with archetype storage and flexible entity filtering.
+
+## 5. Installing via Unity Package Manager (UPM)
+
+You can install StackECS as a Unity package directly from this repository:
+
+### Using manifest.json
+
+Add to your dependencies:
+```json
+"com.a3dline.stackecs": "https://github.com/a3dline/StackECS.git?path=Assets/Scripts/StackECS#1.0.0"
+```
+
+- `com.stackecs.stackecs` — имя пакета из package.json
+- `#1.0.0` — версия тега или релиза в репозитории (убедитесь, что такой тег существует)
+- `path=Assets/Scripts/StackECS` — путь к package.json внутри репозитория
