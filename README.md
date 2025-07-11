@@ -113,7 +113,7 @@ You can install StackECS as a Unity package directly from this repository:
 
 Add to your dependencies:
 ```json
-"com.a3dline.stackecs": "https://github.com/a3dline/StackECS.git?path=Assets/Scripts/StackECS#1.0.0"
+"com.a3dline.stackecs": "https://github.com/a3dline/StackECS.git?path=Assets/Scripts/StackECS#release/1.0.0"
 ```
 
 - `com.stackecs.stackecs` — имя пакета из package.json
