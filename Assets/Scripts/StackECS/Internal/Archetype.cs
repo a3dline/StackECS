@@ -64,6 +64,7 @@ namespace StackECS
         public void Release()
         {
             _uintStorage.Release(_entities);
+            _intStorage.Release(_indexes);
             Mask.Release();
         }
     }
